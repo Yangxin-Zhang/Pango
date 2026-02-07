@@ -4,7 +4,13 @@
 \alias{Stock_Database_Pango}
 \title{Stock Database Pango version S3 class}
 \usage{
-Stock_Database_Pango(db_na = NULL, db_path = NULL)
+Stock_Database_Pango(
+  db_na = NULL,
+  db_path = NULL,
+  activate = FALSE,
+  message_connect = TRUE,
+  message_disconnect = TRUE
+)
 }
 \arguments{
 \item{db_path}{the database path}

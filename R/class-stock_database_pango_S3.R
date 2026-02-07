@@ -8,7 +8,10 @@
 #' @export
 
 Stock_Database_Pango <- function(db_na = NULL,
-                                 db_path = NULL) {
+                                 db_path = NULL,
+                                 activate = FALSE,
+                                 message_connect = TRUE,
+                                 message_disconnect = TRUE) {
 
 
   if (is.null(db_path)) {
@@ -26,12 +29,29 @@ Stock_Database_Pango <- function(db_na = NULL,
   }
 
   db_cnn <- dbConnect(SQLite(),db_path)
-  cat("connect successfully\n")
-  on.exit(dbDisconnect(db_cnn),add = TRUE)
-  on.exit(cat("disconnect successfully\n"),add = TRUE)
 
-  obj <- list(db_cnn = db_cnn,
-              db_path = db_path)
+  if (message_connect) {
+
+    cat("connect successfully\n")
+
+  }
+
+  if (!activate) {
+
+    on.exit(dbDisconnect(db_cnn),add = TRUE)
+
+    if (message_disconnect) {
+
+      on.exit(cat("disconnect successfully\n"),add = TRUE)
+
+    }
+
+  }
+
+  obj <- list(db_na = db_na,
+              db_cnn = db_cnn,
+              db_path = db_path,
+              table = dbListTables(db_cnn))
 
   class(obj) <- "Stock_Database_Pango"
 
