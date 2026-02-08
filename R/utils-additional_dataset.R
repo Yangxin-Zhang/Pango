@@ -30,7 +30,7 @@
 
 .annotate_moving_average_location <- function(origi_dataset,
                                                ma_col)
-{
+  {
 
   on.exit(gc())
 
