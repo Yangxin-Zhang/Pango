@@ -99,7 +99,7 @@ Trend_Graph.Pango <- function(dataset,
     geom_point(data = plotting_dataset,
                mapping = aes(x = Date,
                              y = ma,
-                             colour = factor(ma_dir),
+                             colour = factor(Trend_State),
                              size = factor(ma_inf))) +
     geom_segment(data = plotting_dataset,
                  mapping = aes(x = Date,

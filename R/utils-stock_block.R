@@ -105,17 +105,29 @@
 
   block_na <- names(block_sequence_ls)
 
-  change_blocks <- lapply(block_sequence_ls, function(block_sequence,origi_dt){
+  change_blocks <- lapply(block_sequence_ls, function(block_sequence,origi_dt_cp,origi_dt){
 
-    sub_dt <- origi_dt[block_sequence]
+    sub_dt <- origi_dt_cp[block_sequence]
+
+    if (unique(sub_dt[ma_inf != 0,ma_inf]) == 1) {
+
+      block_volatility <- (max(sub_dt[,ma])-min(sub_dt[,ma]))/min(sub_dt[,ma])
+
+    }
+
+    if (unique(sub_dt[ma_inf != 0,ma_inf]) == -1) {
+
+      block_volatility <- (max(sub_dt[,ma])-min(sub_dt[,ma]))/max(sub_dt[,ma])
+
+    }
 
     ch_blo <- Pango::Change_Block_Pango(stock_symbol = unique(sub_dt$Stock_Code),
-                                        start_date = origi_dt[block_sequence[1],Date],
-                                        end_date = origi_dt[block_sequence[length(block_sequence)],Date],
+                                        start_date = origi_dt_cp[block_sequence[1],Date],
+                                        end_date = origi_dt_cp[block_sequence[length(block_sequence)],Date],
                                         block_period = length(block_sequence),
-                                        block_dataset = sub_dt,
+                                        block_dataset = origi_dt[block_sequence],
                                         inflection_point = sub_dt[ma_inf != 0,Date],
-                                        block_volatility = (max(sub_dt[,ma])-min(sub_dt[,ma]))/min(sub_dt[,ma]),
+                                        block_volatility = block_volatility,
                                         block_order = numeric(),
                                         block_direction = unique(sub_dt[ma_inf != 0,ma_inf]),
                                         block_location = sub_dt[,Date],
@@ -124,7 +136,8 @@
     return(ch_blo)
 
   },
-  origi_dt = origi_dataset_cp)
+  origi_dt_cp = origi_dataset_cp,
+  origi_dt = origi_dataset)
 
   for (i in 1:length(block_na)) {
 
@@ -221,8 +234,164 @@
 
   }
 
-  # block_info_mat_cp[Block_Volatility < 0.03 & Trend_State != 0, Trend_State := 0]
+  i=1
+  while (i <= block_num) {
+
+    k=1
+    while (i+k <= block_num) {
+
+      if (block_info_mat_cp$Trend_State[i] == block_info_mat_cp$Trend_State[i+k]) {
+
+        k <- k+1
+
+      } else {
+
+        break
+
+      }
+    }
+
+    if (k > 1) {
+
+      block_info_mat_cp[c(i:(i+k-1)),Trend_State := block_info_mat_cp$Trend_State[i]]
+
+    } else {
+
+      if (block_info_mat_cp$Block_Volatility[i] < 0.02) {
+
+        block_info_mat_cp[i,Trend_State := 0]
+
+      }
+    }
+
+    i <- i+k
+
+  }
+
 
   return(block_info_mat_cp)
+
+}
+
+#' generate graphic matrix
+#'
+#' @param change_blocks the change blocks
+#' @param information_matrix the information matrix
+
+.generate_graphic_matrix <- function(change_blocks,
+                                     information_matrix)
+  {
+
+  on.exit(gc())
+
+  block_na <- names(change_blocks)
+
+  graphic_matrix_ls <- list()
+  for (i in 1:length(block_na)) {
+
+    block_order <- strsplit(block_na[i],split = "_")
+    block_order <- block_order[[1]][2] %>%
+      as.numeric()
+
+    gra_mat <- change_blocks[[block_na[i]]]$block_dataset
+
+    trend_state <- information_matrix[Block_Order == block_order,Trend_State]
+
+    gra_mat[,Trend_State := trend_state]
+
+    graphic_matrix_ls <- append(graphic_matrix_ls,list(gra_mat))
+
+  }
+
+  graphic_matrix <- rbindlist(graphic_matrix_ls)
+
+  return(graphic_matrix)
+
+}
+
+#' generate trend matrix
+#'
+#' @param graphic_matrix the graphic matrix
+
+.generate_trend_matrix <- function(graphic_matrix,
+                                   ma_col = "sma_d5")
+  {
+
+  on.exit(gc())
+
+  graphic_num <- nrow(graphic_matrix)
+
+  trend_matrix_ls <- list()
+  i=1
+  trend_order <- 1
+  while (i <= graphic_num) {
+
+    k = 1
+    while (i+k <= graphic_num) {
+
+      if (graphic_matrix$Trend_State[i+k] == graphic_matrix$Trend_State[i]) {
+
+        k <- k+1
+
+      } else {
+
+        break
+
+      }
+    }
+
+    trend_na <- paste("Trend",trend_order,sep = "_")
+    trend_matrix_ls[trend_na] <- list("trend_order" = trend_order,
+                                      "start_date" = graphic_matrix$Date[i],
+                                      "end_date" = graphic_matrix$Date[i+k-1],
+                                      "start_close" = graphic_matrix$Close[i],
+                                      "end_close" = graphic_matrix$Close[i+k-1],
+                                      "trend_direction" = graphic_matrix$Trend_State[i],
+                                      "start_ma" = unlist(graphic_matrix[i,..ma_col]),
+                                      "end_ma" = unlist(graphic_matrix[i+k-1,..ma_col])) %>%
+      list()
+
+    i <- i+k
+    trend_order <- trend_order+1
+
+  }
+
+  trend_na <- names(trend_matrix_ls)
+  trend_order <- numeric()
+  start_date <- character()
+  end_date <- character()
+  start_close <- numeric()
+  end_close <- numeric()
+  trend_direction <- numeric()
+  start_ma <- numeric()
+  end_ma <- numeric()
+  for (i in 1:length(trend_na)) {
+
+    trend_order <- c(trend_order,trend_matrix_ls[[trend_na[i]]]$trend_order)
+    start_date <- c(start_date,trend_matrix_ls[[trend_na[i]]]$start_date)
+    end_date <- c(end_date,trend_matrix_ls[[trend_na[i]]]$end_date)
+    trend_direction <- c(trend_direction,trend_matrix_ls[[trend_na[i]]]$trend_direction)
+    start_close <- c(start_close,trend_matrix_ls[[trend_na[i]]]$start_close)
+    end_close <- c(end_close,trend_matrix_ls[[trend_na[i]]]$end_close)
+    start_ma <- c(start_ma,trend_matrix_ls[[trend_na[i]]]$start_ma)
+    end_ma <- c(end_ma,trend_matrix_ls[[trend_na[i]]]$end_ma)
+
+  }
+
+  trend_matrix <- list("Trend_Symbol" = trend_na,
+                       "Trend_Order" = trend_order,
+                       "Start_Date" = start_date,
+                       "End_Date" = end_date,
+                       "Trend_Direction" = trend_direction,
+                       "Start_Close" = start_close,
+                       "End_Close" = end_close,
+                       "Start_Ma" = start_ma,
+                       "End_Ma" = end_ma) %>%
+    as.data.table()
+
+  trend_matrix[,Close_Volatility := (End_Close-Start_Close)/Start_Close]
+  trend_matrix[,Ma_Volatility := (End_Ma-Start_Ma)/Start_Ma]
+
+  return(trend_matrix)
 
 }

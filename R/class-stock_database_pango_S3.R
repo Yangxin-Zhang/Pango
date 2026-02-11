@@ -10,8 +10,8 @@
 Stock_Database_Pango <- function(db_na = NULL,
                                  db_path = NULL,
                                  activate = FALSE,
-                                 message_connect = TRUE,
-                                 message_disconnect = TRUE) {
+                                 message_connect = FALSE,
+                                 message_disconnect = FALSE) {
 
 
   if (is.null(db_path)) {

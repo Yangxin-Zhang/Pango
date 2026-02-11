@@ -11,6 +11,7 @@
   period = "daily",
   adjust = "qfq",
   market = "A",
+  download = FALSE,
   ...
 )
 }
@@ -24,6 +25,8 @@
 \item{adjust}{the data adjust}
 
 \item{market}{the market symbol}
+
+\item{download}{whether download from internet}
 }
 \description{
 extract stock dataset pango

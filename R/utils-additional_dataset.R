@@ -201,3 +201,65 @@
   return(origi_dataset_cp)
 
 }
+
+#' verify year group
+#'
+#' @param years the year group to verify
+
+.verify_year_group <- function(years)
+  {
+
+  on.exit(gc())
+
+  ref_year <- seq(from = min(years),
+                  to = max(years))
+
+  if (length(ref_year) == length(years)) {
+
+    years <- list("Year_Group_1" = years)
+
+    return(years)
+
+  } else {
+
+    year_loc <- ref_year %in% years
+
+    years <-list()
+    k <- numeric()
+    for (i in 1:length(ref_year)) {
+
+      if (i == 1) {
+
+        k <- c(k,ref_year[i])
+
+      }
+
+      if (year_loc[i] == TRUE & i != 1) {
+
+        k <- c(k,ref_year[i])
+
+      }
+
+      if (year_loc[i] == FALSE & length(k) != 0) {
+
+        years <- append(years,list(k))
+        k <- numeric()
+
+      }
+
+      if (i == length(ref_year)) {
+
+        years <- append(years,list(k))
+
+      }
+
+    }
+
+    year_gp_num <- length(years)
+    gp_na <- paste("Year_Group",seq(year_gp_num),sep = "_")
+    names(years) <- gp_na
+
+    return(years)
+
+  }
+}

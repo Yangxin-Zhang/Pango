@@ -8,6 +8,8 @@
 \item{change_blocks}{the block list}
 
 \item{information_matrix}{information matrix}
+
+\item{graphic_matrix}{the matrix for plotting}
 }
 \description{
 the class of Stock Block Pango

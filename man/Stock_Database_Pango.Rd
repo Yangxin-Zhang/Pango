@@ -8,8 +8,8 @@ Stock_Database_Pango(
   db_na = NULL,
   db_path = NULL,
   activate = FALSE,
-  message_connect = TRUE,
-  message_disconnect = TRUE
+  message_connect = FALSE,
+  message_disconnect = FALSE
 )
 }
 \arguments{

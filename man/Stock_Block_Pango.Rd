@@ -4,12 +4,28 @@
 \alias{Stock_Block_Pango}
 \title{constructor}
 \usage{
-Stock_Block_Pango(original_dataset, ma_symbol)
+Stock_Block_Pango(
+  stock_database,
+  stock_symbol,
+  year,
+  period = "daily",
+  adjust = "qfq",
+  market = "A",
+  ma_symbol = "sma_d5"
+)
 }
 \arguments{
-\item{original_dataset}{the original dataset}
+\item{stock_database}{the stock database}
 
-\item{ma_symbol}{the moving average symbol}
+\item{stock_symbol}{the stock symbol}
+
+\item{year}{the year to download}
+
+\item{period}{the data period}
+
+\item{adjust}{the data adjust}
+
+\item{market}{the market symbol}
 }
 \description{
 constructor

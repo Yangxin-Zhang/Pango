@@ -23,5 +23,6 @@
 #'
 #' @import ggplot2
 #' @import data.table
+#' @import shiny
 
 NULL

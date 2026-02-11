@@ -32,7 +32,8 @@ download_stock_dataset_pango.Stock_Database_Pango <- function(x,
 
   stock_db <- Pango::Stock_Database_Pango(db_na = x$db_na,
                                           db_path = x$db_path,
-                                          activate = TRUE)
+                                          activate = TRUE,
+                                          message_connect = TRUE)
 
   ak <- reticulate::import("akshare",convert = FALSE)
   sql <- reticulate::import("sqlite3",convert = FALSE)
@@ -66,6 +67,8 @@ download_stock_dataset_pango.Stock_Database_Pango <- function(x,
                                  "Volume", "Turnover", "Volatility", "Return",
                                  "Price_Change", "Turnover_Rate")
 
+      stock_dataset <- stock_dataset$assign(Year = year)
+
       return(stock_dataset)
 
     },
@@ -97,31 +100,39 @@ download_stock_dataset_pango.Stock_Database_Pango <- function(x,
   stock_db <- Pango::Stock_Database_Pango(db_na = x$db_na,
                                           db_path = x$db_path,
                                           activate = TRUE,
-                                          message_connect = FALSE)
+                                          message_connect = FALSE,
+                                          message_disconnect = FALSE)
 
-  # for (i in 1:length(year)) {
-  #
-  #   st_dt <- Pango::extract_stock_dataset_pango(stock_db,
-  #                                               stock_symbol = stock_symbol,
-  #                                               year = year[i],
-  #                                               period = period,
-  #                                               adjust = adjust,
-  #                                               market = market) %>%
-  #     Pango:::.generate_additional_dataset()
-  #
-  #   dbWriteTable(conn = stock_db$db_cnn,
-  #                name = sheet_na[year[i]],
-  #                value = st_dt,
-  #                overwrite = TRUE)
-  #
-  # }
-  #
-  # dbDisconnect(stock_db$db_cnn)
-  #
-  # stock_db <- Pango::Stock_Database_Pango(db_na = x$db_na,
-  #                                         db_path = x$db_path,
-  #                                         activate = FALSE,
-  #                                         message_connect = FALSE)
+  years <- Pango:::.verify_year_group(year)
+  for (i in 1:length(years)) {
+
+    st_dt <- Pango::extract_stock_dataset_pango(stock_db,
+                                                stock_symbol = stock_symbol,
+                                                year = years[[i]],
+                                                period = period,
+                                                adjust = adjust,
+                                                market = market) %>%
+      Pango:::.generate_additional_dataset()
+
+    for (j in 1:length(years[[i]])) {
+
+      ye <- years[[i]][j]
+
+      dbWriteTable(conn = stock_db$db_cnn,
+                   name = sheet_na[as.character(ye)],
+                   value = st_dt[Year == ye],
+                   overwrite = TRUE)
+
+    }
+  }
+
+  dbDisconnect(stock_db$db_cnn)
+
+  stock_db <- Pango::Stock_Database_Pango(db_na = x$db_na,
+                                          db_path = x$db_path,
+                                          activate = FALSE,
+                                          message_connect = FALSE,
+                                          message_disconnect = FALSE)
 
   return(stock_db)
 
@@ -145,6 +156,7 @@ extract_stock_dataset_pango <- function(x,...)
 #' @param period the data period
 #' @param adjust the data adjust
 #' @param market the market symbol
+#' @param download whether download from internet
 #' @export
 
 extract_stock_dataset_pango.Stock_Database_Pango <- function(x,
@@ -153,17 +165,42 @@ extract_stock_dataset_pango.Stock_Database_Pango <- function(x,
                                                              period = "daily",
                                                              adjust = "qfq",
                                                              market = "A",
+                                                             download = FALSE,
                                                              ...)
   {
 
   stock_db <- Pango::Stock_Database_Pango(db_na = x$db_na,
                                           db_path = x$db_path,
-                                          activate = TRUE)
+                                          activate = TRUE,
+                                          message_connect = TRUE,
+                                          message_disconnect = FALSE)
 
   sheet_na <- paste(stock_symbol,year,sep = "-") %>%
     paste(period,sep = "_") %>%
     paste(adjust,sep = "-") %>%
     paste(market,sep = "-")
+
+  if (sum(!sheet_na %in% stock_db$table) != 0) {
+
+    if (download) {
+
+      download_years <- year[!sheet_na %in% stock_db$table]
+
+      stock_db <-  Pango::download_stock_dataset_pango(stock_db,
+                                                       stock_symbol = stock_symbol,
+                                                       year = year,
+                                                       period = period,
+                                                       adjust = adjust,
+                                                       market = market)
+
+      cat("Download Successfully!\n")
+
+    } else {
+
+      cat("Data is not avaliable\n")
+
+    }
+  }
 
   stock_dataset_ls <- vector("list",length = length(sheet_na))
   names(stock_dataset_ls) <- sheet_na
@@ -182,6 +219,9 @@ extract_stock_dataset_pango.Stock_Database_Pango <- function(x,
 
   cat("disconnect successfully\n")
 
-  return(rbindlist(stock_dataset_ls))
+  stock_dataset <- rbindlist(stock_dataset_ls) %>%
+    setorder(Date)
+
+  return(stock_dataset)
 
 }
