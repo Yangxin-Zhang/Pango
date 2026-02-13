@@ -4,7 +4,7 @@
 \alias{Barchart.Pango}
 \title{generate barchart}
 \usage{
-Barchart.Pango(dataset, aim_col, col_num)
+Barchart.Pango(dataset, aim_col, col_num, log2_trans = FALSE)
 }
 \arguments{
 \item{dataset}{the dataset}

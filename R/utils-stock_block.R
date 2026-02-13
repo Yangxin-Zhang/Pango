@@ -391,6 +391,7 @@
 
   trend_matrix[,Close_Volatility := (End_Close-Start_Close)/Start_Close]
   trend_matrix[,Ma_Volatility := (End_Ma-Start_Ma)/Start_Ma]
+  trend_matrix[,Trend_Interval := as.numeric(difftime(End_Date,Start_Date))]
 
   return(trend_matrix)
 

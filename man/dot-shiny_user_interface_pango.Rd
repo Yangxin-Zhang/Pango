@@ -5,7 +5,7 @@
 \title{R/utils-UI.R
 shiny user interface}
 \usage{
-.shiny_user_interface_pango()
+.shiny_user_interface_pango(stock_db)
 }
 \description{
 R/utils-UI.R

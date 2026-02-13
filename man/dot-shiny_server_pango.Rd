@@ -4,7 +4,7 @@
 \alias{.shiny_server_pango}
 \title{shiny server}
 \usage{
-.shiny_server_pango()
+.shiny_server_pango(stock_db, interval_width = 100)
 }
 \description{
 shiny server

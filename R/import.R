@@ -22,6 +22,7 @@
 #' @importFrom TTR SMA
 #'
 #' @import ggplot2
+#' @import ggnewscale
 #' @import data.table
 #' @import shiny
 

@@ -11,14 +11,26 @@
 
 Barchart.Pango <- function(dataset,
                           aim_col,
-                          col_num)
+                          col_num,
+                          log2_trans = FALSE)
   {
 
   on.exit(gc())
 
-  col_data <- dataset[,..aim_col] %>%
-    unlist() %>%
-    as.numeric()
+  if (log2_trans) {
+
+    col_data <- dataset[,..aim_col] %>%
+      unlist() %>%
+      as.numeric() %>%
+      log2()
+
+  } else {
+
+    col_data <- dataset[,..aim_col] %>%
+      unlist() %>%
+      as.numeric()
+
+  }
 
   col_data <- col_data[!is.na(col_data)]
   col_data <- col_data[is.finite(col_data)]
@@ -45,17 +57,18 @@ Barchart.Pango <- function(dataset,
     geom_col(data = splited_data,
              mapping = aes(x = interval,
                            y = counts)) +
-    labs(title = "interval: ")
+    labs(title = "interval: ") +
     theme(panel.background = element_blank(),
-          panel.grid.major.y = element_line(color = "black",
-                                            linewidth = 0.5),
+          panel.grid.major.y = element_line(color = "grey90",
+                                            linewidth = 0.3),
           axis.text.x = element_text(colour = "black",
                                      angle = 60,
                                      hjust = 1),
           axis.line.x = element_line(color = "black",
                                      linewidth = 0.5),
           axis.line.y = element_line(color = "black",
-                                     linewidth = 0.5))
+                                     linewidth = 0.5),
+          plot.background = element_blank())
 
   return(plot)
 
@@ -63,37 +76,83 @@ Barchart.Pango <- function(dataset,
 
 #' trend plot
 #'
-#' @param dataset the dataset
+#' @param stock_block the stock block class
 #' @param interval the description interval
+#' @param interval_width the interval width
 #' @export
 
-Trend_Graph.Pango <- function(dataset,
-                              interval = c(1,nrow(dataset)),
-                              ma_symbol = "sma",
-                              ma_interval = 5)
+Trend_Graph.Pango <- function(stock_block,
+                              interval = numeric(),
+                              interval_width = 100,
+                              ma_symbol = "sma_d5",
+                              linewidth = 0.3)
   {
 
   on.exit(gc())
 
-  dataset_cp <- copy(dataset)
+  dataset_graphic <- copy(stock_block@graphic_matrix) %>%
+    Pango:::.generate_plotting_cols(ma_symbol = ma_symbol)
+  dataset_graphic[,Data_Symbol := "graphic"]
+  date_graphic <- dataset_graphic[,Date]
 
-  ma_col <- paste(ma_symbol,ma_interval,sep = "_d")
-  ma_value <- dataset_cp[,..ma_col]
-  dataset_cp[,ma := ma_value]
+  dataset_original <- copy(stock_block@original_matrix) %>%
+    Pango:::.generate_plotting_cols(ma_symbol = ma_symbol)
+  dataset_original[,Data_Symbol := "original"]
+  date_original <- dataset_original[,Date]
 
-  ma_dir_col <- paste(ma_col,"dir",sep = "_")
-  ma_dir_value <- dataset_cp[,..ma_dir_col]
-  dataset_cp[,ma_dir := ma_dir_value]
+  dataset <- bind_rows(dataset_original[!date_original %in% date_graphic],
+                       dataset_graphic) %>%
+    setorder(Date)
 
-  ma_inf_col <- paste(ma_col,"inf",sep = "_")
-  ma_inf_value <- dataset_cp[,..ma_inf_col]
-  dataset_cp[,ma_inf := ma_inf_value]
+  dataset[Data_Symbol == "original", Trend_State := ma_dir]
 
-  interval <- seq(from = interval[1],
-                  to = interval[2],
-                  by = 1)
+  if (length(interval) == 2) {
 
-  plotting_dataset <- dataset_cp[interval]
+    if (sum(!is.na(interval)) == 2) {
+
+      interval <- seq(from = interval[1],
+                      to = interval[2],
+                      by = 1)
+
+    } else {
+
+      if (is.na(interval[1])) {
+
+        interval <- seq(from = 1,
+                        to = interval[2],
+                        by = 1)
+
+      } else {
+
+        interval <- seq(from = interval[1],
+                        to = nrow(dataset),
+                        by = 1)
+
+      }
+
+    }
+  } else {
+
+    if (interval > interval_width) {
+
+      interval <- seq(from = (interval-interval_width-1),
+                      to = interval,
+                      by = 1)
+
+    } else {
+
+      interval <- seq(from = 1,
+                      to = interval,
+                      by = 1)
+
+    }
+  }
+
+  plotting_dataset <- dataset[interval]
+
+  plotting_dataset[Close > Open, linecolor := "red"]
+  plotting_dataset[Close == Open, linecolor := "green"]
+  plotting_dataset[Close < Open, linecolor := "blue"]
 
   plot <- ggplot() +
     geom_point(data = plotting_dataset,
@@ -101,15 +160,28 @@ Trend_Graph.Pango <- function(dataset,
                              y = ma,
                              colour = factor(Trend_State),
                              size = factor(ma_inf))) +
-    geom_segment(data = plotting_dataset,
-                 mapping = aes(x = Date,
-                               xend = Date,
-                               y = High,
-                               yend = Low)) +
     scale_colour_manual(values = c("1" = "red",
                                    "-1" = "blue",
                                    "0" = "green"),
                         na.value = "black") +
+    new_scale_colour() +
+    geom_segment(data = plotting_dataset,
+                 mapping = aes(x = Date,
+                               xend = Date,
+                               y = High,
+                               yend = Low,
+                               colour = linecolor),
+                 linewidth = linewidth) +
+    geom_errorbar(data = plotting_dataset,
+                 mapping = aes(ymin = Close,
+                               ymax = Open,
+                               x = Date,
+                               colour = linecolor),
+                 linewidth = linewidth,
+                 width = 0.5) +
+    scale_colour_manual(values = c("red" = "red",
+                                   "blue" = "blue",
+                                   "green" = "green")) +
     scale_size_manual(values = c("1" = 2,
                                  "-1" = 2,
                                  "0" = 1),
@@ -130,5 +202,31 @@ Trend_Graph.Pango <- function(dataset,
           legend.position = "none")
 
   return(plot)
+
+}
+
+#' generate plotting cols
+#'
+#' @param original_dataset the original dataset
+#' @param ma_symbol the moving average symbol
+
+.generate_plotting_cols <- function(original_dataset,
+                                    ma_symbol) {
+
+  on.exit(gc())
+
+  dataset <- copy(original_dataset)
+  ma_value <- dataset[,..ma_symbol]
+  dataset[,ma := ma_value]
+
+  ma_dir_col <- paste(ma_symbol,"dir",sep = "_")
+  ma_dir_value <- dataset[,..ma_dir_col]
+  dataset[,ma_dir := ma_dir_value]
+
+  ma_inf_col <- paste(ma_symbol,"inf",sep = "_")
+  ma_inf_value <- dataset[,..ma_inf_col]
+  dataset[,ma_inf := ma_inf_value]
+
+  return(dataset)
 
 }

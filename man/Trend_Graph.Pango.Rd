@@ -5,16 +5,19 @@
 \title{trend plot}
 \usage{
 Trend_Graph.Pango(
-  dataset,
-  interval = c(1, nrow(dataset)),
-  ma_symbol = "sma",
-  ma_interval = 5
+  stock_block,
+  interval = numeric(),
+  interval_width = 100,
+  ma_symbol = "sma_d5",
+  linewidth = 0.3
 )
 }
 \arguments{
-\item{dataset}{the dataset}
+\item{stock_block}{the stock block class}
 
 \item{interval}{the description interval}
+
+\item{interval_width}{the interval width}
 }
 \description{
 trend plot
